@@ -28,7 +28,7 @@ export async function initializeGame() {
 
   // Establish Socket.IO connection.
   // Assumes that the Socket.IO script is loaded globally via CDN and available as 'io'.
-  const socket = io("https://3db21b63-ee56-43d9-877f-e5b68b462df6-00-3s3v6c139aq4b.spock.repl.co/");
+  const socket = io("https://3db21b63-ee56-43d9-877f-e5b68b462df6-00-3s3v6c139aq4b.spock.replit.dev/");
   socket.on("connect", () => {
     console.log(`Socket.IO: Connected as ${socket.id}`);
     socket.emit("join-lobby", lobby);
