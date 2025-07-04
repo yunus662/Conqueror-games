@@ -33,7 +33,7 @@ export async function initializeGame() {
     console.log(`Socket.IO: Connected as ${socket.id}`);
     socket.emit("join-lobby", lobby);
   });
-  socket.on("map-update", (data) => {
+  socket("map-update", (data) => {
     console.log("Map update received:", data);
     if (typeof window.handleMapUpdate === "function") {
       window.handleMapUpdate(data);
