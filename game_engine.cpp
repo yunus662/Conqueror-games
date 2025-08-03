@@ -582,3 +582,102 @@ int main() {
     GameEngine::logEvent("NationBuilder Game Engine terminated.");
     return 0;
 }
+#include <unordered_map>
+
+// ========================================================
+// Part 5: Advanced Unit Movement Orders and Pathfinding Integration
+// ========================================================
+
+namespace Movement {
+
+    // Global container for movement orders.
+    // Each order maps an entity's id to its target destination.
+    std::unordered_map<std::string, Vector2D> movementOrders;
+
+    // Sets a movement order for a specific entity.
+    // If orders exists for an entity, it will be updated.
+    void setMovementOrder(const std::string &entityId, const Vector2D &target) {
+        movementOrders[entityId] = target;
+        Logger::log("Movement order set for " + entityId + " to target (" +
+                    std::to_string(target.x) + ", " + std::to_string(target.y) + ")");
+    }
+
+    // Update all movement orders.
+    // For each entity with an active order, this function adjusts its velocity
+    // to steer toward the designated target. When an entity comes within a threshold
+    // distance of its target, the order is removed.
+    void updateMovementOrders(double dt) {
+        // Because orders may be removed during iteration, use an iterator-based loop.
+        for (auto it = movementOrders.begin(); it != movementOrders.end(); ) {
+            const std::string &entityId = it->first;
+            Vector2D target = it->second;
+            bool orderCompleted = false;
+            // Search for the entity in the global container.
+            for (auto &entity : g_entities) {
+                if (entity.id == entityId && !entity.destroyed) {
+                    Vector2D toTarget = target - entity.position;
+                    double distance = toTarget.length();
+                    // If the entity is close enough to the target, mark the order complete.
+                    if (distance < 1.0) {
+                        Logger::log(entityId + " has reached the destination.");
+                        orderCompleted = true;
+                    } else {
+                        // Compute desired velocity (aiming for a constant speed of 5 units/sec).
+                        Vector2D desiredVelocity = toTarget.normalized() * 5.0;
+                        // Calculate steering force: difference between desired and current velocity.
+                        Vector2D steering = desiredVelocity - entity.velocity;
+                        // Apply a smoothing factor to avoid abrupt changes.
+                        constexpr double factor = 0.2;
+                        entity.velocity += steering * factor * dt;
+                    }
+                    break;  // Found the entity so no need to check further.
+                }
+            }
+            // Erase the movement order if the destination has been reached.
+            if (orderCompleted) {
+                it = movementOrders.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+}
+
+// ========================================================
+// Integration into Engine's Main Loop
+// ========================================================
+//
+// In your Engine::run() loop, add a call to update movement orders.
+// For example:
+//
+//   void Engine::run() {
+//       Logger::log("Engine main loop started.");
+//       while (running) {
+//           auto start = std::chrono::high_resolution_clock::now();
+//
+//           Physics::update(dt);
+//           AI::updateEntities(dt);
+//           AdvancedAI::updateSteering(dt);
+//           // NEW: Process any active movement orders.
+//           Movement::updateMovementOrders(dt);
+//           g_resourceManager.update(dt);
+//           Network::sendUpdates();
+//           Network::receiveCommands();
+//           g_resourceManager.print();
+//
+//           auto end = std::chrono::high_resolution_clock::now();
+//           std::chrono::duration<double> elapsed = end - start;
+//           if (elapsed.count() < dt) {
+//               std::this_thread::sleep_for(std::chrono::duration<double>(dt - elapsed.count()));
+//           }
+//       }
+//   }
+//
+// To issue a movement order (for testing or in reaction to game events),
+// call:
+//     Movement::setMovementOrder("Entity_3", Vector2D(75.0, 75.0));
+//
+// This ensures that entity "Entity_3" will gradually adjust its velocity to steer
+// toward the point (75, 75) until it reaches close enough that the order is removed.
+// ========================================================
+
